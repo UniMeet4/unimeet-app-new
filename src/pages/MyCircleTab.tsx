@@ -72,17 +72,18 @@ const MyCircleTab = ({ joinedActivities, liveFriends, friendsPlans }: any) => {
   // Fetch 10 most recently onboarded users (excluding self)
   useEffect(() => {
     if (!user?.id) return;
-    supabase
-      .from('profiles')
-      .select('id, full_name, avatar_url, major, grad_year, interests')
-      .eq('has_onboarded', true)
-      .neq('id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(10)
-      .then(({ data }) => {
-        console.log('New Arrivals Data:', data);
-        if (data) setNewArrivals(data);
-      });
+    const fetchArrivals = async () => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url, major, grad_year, interests')
+        .eq('has_onboarded', true)
+        .neq('id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      console.log('New Arrivals Data:', data, 'Error:', error);
+      if (data) setNewArrivals(data);
+    };
+    fetchArrivals();
   }, [user?.id]);
 
   const handleAddToCircle = async (targetId: string) => {
