@@ -18,17 +18,19 @@ export interface ThemeTokens {
 }
 
 const buildTheme = (isDark: boolean): ThemeTokens => ({
-  bg:            isDark ? '#050B18'                  : '#F8FAFC',
-  cardBg:        isDark ? 'rgba(15, 23, 42, 0.82)'  : 'rgba(255, 255, 255, 0.8)',
-  cardBorder:    isDark ? 'rgba(255,255,255,0.06)'   : 'rgba(15, 23, 42, 0.08)',
-  cardShadow:    isDark ? 'none'                     : '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.03)',
-  text:          isDark ? '#FFFFFF'                  : '#0F172A',
-  subText:       '#64748B',
-  divider:       isDark ? 'rgba(255,255,255,0.05)'   : 'rgba(15, 23, 42, 0.06)',
-  navBorder:     isDark ? 'rgba(255,255,255,0.05)'   : 'rgba(15, 23, 42, 0.08)',
-  navActive:     isDark ? '#F3D99A'                  : '#D97706',
-  inactiveBtnBg: isDark ? 'rgba(255,255,255,0.04)'   : 'rgba(15, 23, 42, 0.05)',
-  avatarBorder:  isDark ? '#0F172A'                  : '#F8FAFC',
+  bg:            isDark ? '#0A0C12'                       : '#F8FAFC',
+  cardBg:        isDark ? 'rgba(30, 41, 59, 0.45)'        : 'rgba(255, 255, 255, 0.8)',
+  cardBorder:    isDark ? 'rgba(255,255,255,0.08)'         : 'rgba(15, 23, 42, 0.08)',
+  cardShadow:    isDark
+    ? 'inset 0 1px 0 rgba(255,255,255,0.12), inset 1px 0 0 rgba(255,255,255,0.08)'
+    : '0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.03)',
+  text:          isDark ? '#EDE8DF'                       : '#0F172A',
+  subText:       isDark ? '#8896A9'                       : '#64748B',
+  divider:       isDark ? 'rgba(255,255,255,0.06)'         : 'rgba(15, 23, 42, 0.06)',
+  navBorder:     isDark ? 'rgba(255,255,255,0.06)'         : 'rgba(15, 23, 42, 0.08)',
+  navActive:     isDark ? '#E2D1B3'                       : '#B89660',
+  inactiveBtnBg: isDark ? 'rgba(30, 41, 59, 0.5)'         : 'rgba(15, 23, 42, 0.05)',
+  avatarBorder:  isDark ? '#E2D1B3'                       : '#B89660',
 });
 
 // ── Context ────────────────────────────────────────────────────────────

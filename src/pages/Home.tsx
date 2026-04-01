@@ -115,7 +115,16 @@ const Home = () => {
   };
 
   return (
-    <div className="page-fade" style={{ backgroundColor: theme.bg, minHeight: '100vh', width: '100%', display: 'flex', justifyContent: 'center', color: theme.text }}>
+    <div className="page-fade" style={{
+      background: [
+        // Soft indigo atmosphere — top-left
+        'radial-gradient(ellipse 75% 55% at 12% 8%, rgba(30,41,90,0.6) 0%, transparent 60%)',
+        // Faint champagne warmth — bottom-right
+        'radial-gradient(ellipse 60% 45% at 90% 95%, rgba(226,209,179,0.055) 0%, transparent 58%)',
+        theme.bg,
+      ].join(', '),
+      minHeight: '100vh', width: '100%', display: 'flex', justifyContent: 'center', color: theme.text,
+    }}>
       <div style={{ width: '100%', maxWidth: '440px', padding: '0 16px' }}>
 
         {/* HEADER */}
@@ -187,7 +196,7 @@ const Home = () => {
                     transition={slideTransition}
                     style={{ paddingBottom: '32px' }}
                   >
-                    <DiscoveryTab categories={CATEGORIES} handlePost={handlePost} />
+                    <DiscoveryTab categories={CATEGORIES} handlePost={handlePost} posts={posts} />
                   </motion.div>
                 ) : (
                   /* ── MAP + FEED VIEW ── */
