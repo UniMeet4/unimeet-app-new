@@ -20,6 +20,10 @@ const MOCK_PLANS = [
 const AVATAR_COLORS = ['#3B82F6', '#8B5CF6', '#10B981', '#F59E0B', '#EF4444', '#EC4899'];
 const colorFromId = (id: string) => AVATAR_COLORS[(id?.charCodeAt(0) ?? 0) % AVATAR_COLORS.length];
 const minsAgo = (lastSeen: string) => Math.max(0, Math.floor((Date.now() - new Date(lastSeen).getTime()) / 60000));
+const isRecentPost = (friend: any) => {
+  if (friend.last_seen) return minsAgo(friend.last_seen) < 60;
+  return typeof friend.minsAgo === 'number' && friend.minsAgo < 60;
+};
 
 const emojiGlow = (icon: string) => {
   if (/☕|🍵|🧋/.test(icon)) return 'rgba(161, 100, 40, 0.5)';
@@ -31,8 +35,37 @@ const emojiGlow = (icon: string) => {
 };
 
 const labelStyle: React.CSSProperties = {
-  fontSize: '11px', fontWeight: '900', color: '#475569',
-  letterSpacing: '0.05em', textTransform: 'uppercase',
+  fontSize: '10px', fontWeight: '900', color: 'rgba(226,209,179,0.45)',
+  letterSpacing: '0.12em', textTransform: 'uppercase',
+};
+
+// Tinted glass helpers for activity icon badges
+const emojiTintBg = (icon: string) => {
+  if (/☕|🍵|🧋/.test(icon)) return 'rgba(161,100,40,0.14)';
+  if (/🏋|⚽|🏃|🎾|🏊/.test(icon)) return 'rgba(255,110,50,0.13)';
+  if (/📚|💻|✏️/.test(icon)) return 'rgba(59,130,246,0.13)';
+  if (/🎮|🕹/.test(icon)) return 'rgba(139,92,246,0.13)';
+  if (/🎵|🎸|🎧/.test(icon)) return 'rgba(236,72,153,0.13)';
+  return 'rgba(226,209,179,0.09)';
+};
+const emojiTintBorder = (icon: string) => {
+  if (/☕|🍵|🧋/.test(icon)) return 'rgba(161,100,40,0.32)';
+  if (/🏋|⚽|🏃|🎾|🏊/.test(icon)) return 'rgba(255,110,50,0.30)';
+  if (/📚|💻|✏️/.test(icon)) return 'rgba(59,130,246,0.28)';
+  if (/🎮|🕹/.test(icon)) return 'rgba(139,92,246,0.28)';
+  if (/🎵|🎸|🎧/.test(icon)) return 'rgba(236,72,153,0.28)';
+  return 'rgba(226,209,179,0.22)';
+};
+
+// Berkeley Blue glassmorphism — gradient border trick (works with border-radius)
+const bentoGlass: React.CSSProperties = {
+  background:
+    'linear-gradient(rgba(0,50,98,0.25), rgba(0,50,98,0.25)) padding-box, ' +
+    'linear-gradient(135deg, rgba(253,181,21,0.55) 0%, rgba(253,181,21,0) 55%) border-box',
+  border: '1px solid transparent',
+  backdropFilter: 'blur(20px)',
+  WebkitBackdropFilter: 'blur(20px)',
+  borderRadius: '24px',
 };
 
 const SQUAD_COLORS = ['#3B82F6', '#8B5CF6', '#10B981'];
@@ -51,6 +84,25 @@ const SquadCluster = () => (
 
 const avatarPublicUrl = (avatarPath: string | null) =>
   avatarPath ? supabase.storage.from('avatars').getPublicUrl(avatarPath).data.publicUrl : null;
+
+// Floating emoji with drop-shadow beneath
+const FloatingEmoji = ({ icon, size = 38 }: { icon: string; size?: number }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+    <motion.div
+      animate={{ y: [0, -8, 0] }}
+      transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+    >
+      <span style={{ fontSize: `${size}px`, lineHeight: 1, display: 'block' }}>{icon}</span>
+    </motion.div>
+    {/* Soft depth shadow */}
+    <div style={{
+      width: `${size * 0.65}px`, height: '5px', borderRadius: '50%',
+      background: 'rgba(0,0,0,0.28)',
+      filter: 'blur(4px)',
+      marginTop: '3px',
+    }} />
+  </div>
+);
 
 // ── Component ─────────────────────────────────────────────────────────
 const MyCircleTab = ({ joinedActivities, liveFriends, friendsPlans }: any) => {
@@ -115,42 +167,53 @@ const MyCircleTab = ({ joinedActivities, liveFriends, friendsPlans }: any) => {
           </div>
         ) : (
           <div style={{ display: 'flex', gap: '16px', overflowX: 'auto', paddingBottom: '8px', scrollbarWidth: 'none' }}>
-            {newArrivals.map(p => {
+            {newArrivals.map((p, idx) => {
               const imgUrl = avatarPublicUrl(p.avatar_url);
               const initial = p.full_name?.[0]?.toUpperCase() ?? 'N';
               const color = colorFromId(p.id);
+              const isNullName = !p.full_name;
+              // Deterministic sticker rotation: spread from -3 to +3 deg
+              const rotation = (idx % 7 - 3) * 0.9;
+
               return (
-                <div
+                <motion.div
                   key={p.id}
                   onClick={() => setPeekedProfile(p)}
+                  initial={{ rotate: rotation }}
+                  animate={{ rotate: rotation }}
+                  whileHover={{ scale: 1.12, rotate: 0, transition: { duration: 0.15 } }}
                   style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', flexShrink: 0, cursor: 'pointer', width: '60px' }}
                 >
-                  {/* Avatar with golden ring */}
-                  <div style={{
-                    width: '56px', height: '56px', borderRadius: '50%',
-                    padding: '2.5px',
-                    background: 'linear-gradient(135deg, #FFD700 0%, rgba(255,215,0,0.3) 100%)',
-                    boxShadow: '0 0 12px rgba(255,215,0,0.25)',
-                  }}>
-                    <div style={{
-                      width: '100%', height: '100%', borderRadius: '50%',
+                  {/* Sticker avatar — 3px solid white border */}
+                  <motion.div
+                    animate={isNullName ? {
+                      boxShadow: [
+                        '0 0 0px rgba(253,181,21,0)',
+                        '0 0 14px rgba(253,181,21,0.75)',
+                        '0 0 0px rgba(253,181,21,0)',
+                      ],
+                    } : {}}
+                    transition={isNullName ? { duration: 2, repeat: Infinity, ease: 'easeInOut' } : {}}
+                    style={{
+                      width: '56px', height: '56px', borderRadius: '50%',
+                      border: '3px solid #E2D1B3',
                       backgroundColor: color,
-                      border: `2px solid ${theme.bg}`,
                       overflow: 'hidden',
                       display: 'flex', justifyContent: 'center', alignItems: 'center',
-                    }}>
-                      {imgUrl
-                        ? <img src={imgUrl} alt={p.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        : <span style={{ fontSize: '18px', fontWeight: '900', color: '#fff' }}>{initial}</span>
-                      }
-                    </div>
-                  </div>
+                      boxShadow: '0 3px 10px rgba(0,0,0,0.3)',
+                    }}
+                  >
+                    {imgUrl
+                      ? <img src={imgUrl} alt={p.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <span style={{ fontSize: '18px', fontWeight: '900', color: '#fff' }}>{initial}</span>
+                    }
+                  </motion.div>
                   <span style={{
                     fontSize: '10px', fontWeight: '700', color: theme.text,
                     maxWidth: '60px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     textAlign: 'center',
                   }}>{p.full_name?.split(' ')[0] ?? 'New User'}</span>
-                </div>
+                </motion.div>
               );
             })}
           </div>
@@ -160,11 +223,16 @@ const MyCircleTab = ({ joinedActivities, liveFriends, friendsPlans }: any) => {
       {/* ── LIVE BENTO GRID ───────────────────────────────────────── */}
       <div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-          <span style={labelStyle}>⚡ Live Now</span>
+          <span style={{
+            fontSize: '14px', fontWeight: '900', fontStyle: 'italic',
+            color: '#E2D1B3', letterSpacing: '0.12em', fontFamily: 'inherit',
+          }}>WHAT'S THE MOVE?</span>
           <button style={{
-            backgroundColor: 'rgba(255,215,0,0.08)', border: '1px solid rgba(255,215,0,0.2)',
-            color: '#FFD700', borderRadius: '10px', padding: '5px 12px',
+            backgroundColor: 'rgba(253,181,21,0.08)',
+            border: '1px solid rgba(253,181,21,0.3)',
+            color: '#FDB515', borderRadius: '10px', padding: '5px 12px',
             fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+            boxShadow: '0 0 15px rgba(253, 181, 21, 0.4)',
           }}>+ Share</button>
         </div>
 
@@ -179,49 +247,85 @@ const MyCircleTab = ({ joinedActivities, liveFriends, friendsPlans }: any) => {
             const location = friend.current_location ?? friend.location ?? '—';
             const ago = isReal && friend.last_seen ? `${minsAgo(friend.last_seen)}m` : `${friend.minsAgo}m`;
             const isWide = idx === 0;
+            const isRecent = isRecentPost(friend);
+            const rawAgo = typeof friend.minsAgo === 'number' ? friend.minsAgo : (friend.last_seen ? minsAgo(friend.last_seen) : 999);
+            const heatValue = isRecent ? Math.max(1, Math.round(15 - rawAgo / 5)) : 0;
 
             return (
-              <div key={friend.id} style={{
-                ...glass, padding: '18px',
-                gridColumn: isWide ? 'span 2' : undefined,
-                display: isWide ? 'flex' : 'block',
-                alignItems: isWide ? 'center' : undefined,
-                gap: isWide ? '18px' : undefined,
-              }}>
+              <motion.div
+                key={friend.id}
+                whileHover={{ y: -5, transition: { duration: 0.2 } }}
+                style={{
+                  ...bentoGlass, padding: '18px',
+                  gridColumn: isWide ? 'span 2' : undefined,
+                  display: isWide ? 'flex' : 'block',
+                  alignItems: isWide ? 'center' : undefined,
+                  gap: isWide ? '18px' : undefined,
+                }}
+              >
                 {isWide ? (
                   <>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: color, display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', fontSize: '14px', flexShrink: 0 }}>{initial}</div>
+                        <motion.div
+                          animate={isRecent ? { boxShadow: ['0 0 0 0px rgba(226,209,179,0)', '0 0 0 5px rgba(226,209,179,0.45)', '0 0 0 0px rgba(226,209,179,0)'] } : {}}
+                          transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                          style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: color, border: '2px solid #E2D1B3', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', fontSize: '14px', flexShrink: 0 }}
+                        >{initial}</motion.div>
                         <div>
                           <div style={{ fontWeight: '900', fontSize: '14px' }}>{name}</div>
-                          <div style={{ fontSize: '10px', color: '#FFD700', fontWeight: '700', marginTop: '1px' }}>{ago} ago</div>
+                          <div style={{ fontSize: '10px', color: '#FDB515', fontWeight: '700', marginTop: '1px' }}>{ago} ago</div>
                         </div>
                       </div>
                       <div style={{ fontWeight: '700', fontSize: '13px', marginBottom: '3px' }}>{actTitle}</div>
-                      <div style={{ fontSize: '11px', color: '#475569' }}>📍 {location}</div>
+                      <div style={{ fontSize: '11px', color: '#475569', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        📍 {location}
+                        {heatValue > 0 && <span style={{ color: '#FB923C', fontWeight: '800', fontSize: '10px', flexShrink: 0 }}>🔥 {heatValue}</span>}
+                      </div>
                     </div>
-                    <div style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ position: 'absolute', width: '60px', height: '60px', borderRadius: '50%', background: `radial-gradient(circle, ${emojiGlow(actIcon)} 0%, transparent 70%)` }} />
-                      <span style={{ fontSize: '38px', position: 'relative', lineHeight: 1 }}>{actIcon}</span>
+                    {/* Tinted glass activity badge */}
+                    <div style={{
+                      width: '62px', height: '62px', borderRadius: '18px', flexShrink: 0,
+                      background: `linear-gradient(${emojiTintBg(actIcon)}, ${emojiTintBg(actIcon)}) padding-box, linear-gradient(135deg, ${emojiTintBorder(actIcon)} 0%, transparent 60%) border-box`,
+                      border: '1px solid transparent',
+                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: `0 0 18px ${emojiGlow(actIcon)}`,
+                    }}>
+                      <FloatingEmoji icon={actIcon} size={30} />
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: color, display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', fontSize: '11px', flexShrink: 0 }}>{initial}</div>
+                      <motion.div
+                        animate={isRecent ? { boxShadow: ['0 0 0 0px rgba(226,209,179,0)', '0 0 0 4px rgba(226,209,179,0.45)', '0 0 0 0px rgba(226,209,179,0)'] } : {}}
+                        transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                        style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: color, border: '2px solid #E2D1B3', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '900', fontSize: '11px', flexShrink: 0 }}
+                      >{initial}</motion.div>
                       <span style={{ fontWeight: '800', fontSize: '12px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                     </div>
-                    <div style={{ position: 'relative', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <div style={{ position: 'absolute', width: '50px', height: '50px', borderRadius: '50%', background: `radial-gradient(circle, ${emojiGlow(actIcon)} 0%, transparent 70%)` }} />
-                      <span style={{ fontSize: '30px', position: 'relative', lineHeight: 1 }}>{actIcon}</span>
+                    {/* Tinted glass activity badge */}
+                    <div style={{
+                      width: '50px', height: '50px', borderRadius: '14px',
+                      background: `linear-gradient(${emojiTintBg(actIcon)}, ${emojiTintBg(actIcon)}) padding-box, linear-gradient(135deg, ${emojiTintBorder(actIcon)} 0%, transparent 60%) border-box`,
+                      border: '1px solid transparent',
+                      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      margin: '0 auto 10px',
+                      boxShadow: `0 0 14px ${emojiGlow(actIcon)}`,
+                    }}>
+                      <span style={{ fontSize: '22px', lineHeight: 1 }}>{actIcon}</span>
                     </div>
                     <div style={{ fontSize: '12px', fontWeight: '700', marginBottom: '2px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{actTitle}</div>
-                    <div style={{ fontSize: '10px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>📍 {location}</div>
-                    <div style={{ fontSize: '10px', color: '#FFD700', fontWeight: '700', marginTop: '8px' }}>{ago} ago</div>
+                    <div style={{ fontSize: '10px', color: '#475569', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>📍 {location}</span>
+                      {heatValue > 0 && <span style={{ color: '#FB923C', fontWeight: '800', flexShrink: 0 }}>🔥 {heatValue}</span>}
+                    </div>
+                    <div style={{ fontSize: '10px', color: 'rgba(226,209,179,0.6)', fontWeight: '700', marginTop: '8px' }}>{ago} ago</div>
                   </>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
